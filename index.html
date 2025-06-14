@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hong Kong Bus ETA Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .stop-item { cursor: pointer; color: blue; text-decoration: underline; }
+        .stop-item:hover { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Hong Kong Bus ETA Checker</h1>
+    
+    <input type="text" id="stopSearch" placeholder="Enter stop name">
+    <button onclick="searchStop()">Search</button>
+
+    <div id="stopResults"></div>
+    <div id="routeSelection" style="display: none;">
+        <h2>Select a Route</h2>
+        <select id="routeSelect"></select>
+        <button onclick="getETA()">Check ETA</button>
+    </div>
+
+    <div id="etaResults"></div>
+
+    <script>
+        function searchStop() {
+            let query = document.getElementById("stopSearch").value;
+            fetch(`/search_stop?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    let resultsDiv = document.getElementById("stopResults");
+                    resultsDiv.innerHTML = "<h2>Matching Stops:</h2>";
+                    data.forEach((stop, index) => {
+                        resultsDiv.innerHTML += `<p class="stop-item" onclick="selectStop('${stop.stop}')">${index + 1}. ${stop.name_en} (Stop ID: ${stop.stop})</p>`;
+                    });
+                });
+        }
+
+        function selectStop(stopId) {
+            document.getElementById("routeSelection").style.display = "block";
+            document.getElementById("routeSelect").setAttribute("data-stop-id", stopId);
+            
+            fetch(`/get_routes?stop_id=${stopId}`)
+                .then(response => response.json())
+                .then(routes => {
+                    let routeSelect = document.getElementById("routeSelect");
+                    routeSelect.innerHTML = "";
+                    routes.forEach(route => {
+                        routeSelect.innerHTML += `<option value="${route[0]}">${route[0]} → ${route[1]}</option>`;
+                    });
+                });
+        }
+
+        function getETA() {
+            let stopId = document.getElementById("routeSelect").getAttribute("data-stop-id");
+            let routeNumber = document.getElementById("routeSelect").value;
+            fetch(`/get_eta?stop_id=${stopId}&route_number=${routeNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    let etaDiv = document.getElementById("etaResults");
+                    etaDiv.innerHTML = `<h2>ETA for Route ${routeNumber}:</h2>`;
+                    data.forEach(entry => {
+                        etaDiv.innerHTML += `<p>ETA: ${entry.countdown || "No ETA available"} (${entry.remarks})</p>`;
+                    });
+                });
+        }
+    </script>
+</body>
+</html>
